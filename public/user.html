@@ -1,15 +1,43 @@
-<!DOCTYPE html><html><head><meta charset="utf-8"><title>User</title></head><body>
-<video id="localVideo" autoplay muted playsinline style="width:100%;max-width:400px"></video>
-<script src="/socket.io/socket.io.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/simple-peer/simplepeer.min.js"></script>
-<script>
-const socket = io();
-navigator.mediaDevices.getUserMedia({video:{facingMode:"user"},audio:false})
-  .then(stream => {
-    document.getElementById('localVideo').srcObject = stream;
-    const peer = new SimplePeer({initiator: false, trickle: false, stream});
-    socket.on('admin-signal', data => peer.signal(data));
-    peer.on('signal', data => socket.emit('user-signal', data));
-  }).catch(err => alert('Camera permission denied'));
-</script>
-</body></html>
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>User</title>
+  <style>
+    #remoteVideo { width: 100%; height: auto; }
+    #localVideo {
+      position: fixed;
+      width: 200px;
+      height: 150px;
+      bottom: 10px;
+      right: 10px;
+      border: 2px solid white;
+    }
+  </style>
+</head>
+<body>
+  <video id="remoteVideo" autoplay playsinline></video>
+  <video id="localVideo" autoplay muted playsinline></video>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/simple-peer/simplepeer.min.js"></script>
+  <script>
+    const socket = io();
+    const localVideo = document.getElementById('localVideo');
+    const remoteVideo = document.getElementById('remoteVideo');
+
+    navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then(stream => {
+      localVideo.srcObject = stream;
+
+      const peer = new SimplePeer({ initiator: false, trickle: false, stream });
+
+      peer.on('signal', data => socket.emit('user-signal', data));
+      socket.on('admin-signal', data => peer.signal(data));
+
+      peer.on('stream', remoteStream => {
+        remoteVideo.srcObject = remoteStream;
+      });
+    });
+  </script>
+</body>
+</html>
