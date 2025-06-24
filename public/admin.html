@@ -1,33 +1,43 @@
-<!DOCTYPE html><html><head><meta charset="utf-8"><title>Admin</title></head><body>
-<video id="remoteVideo" autoplay playsinline style="width:100%;max-width:400px;background:#000"></video><br>
-<button id="startBtn">Start Streaming</button>
-<button id="stopBtn" disabled>Stop Streaming</button>
-<script src="/socket.io/socket.io.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/simple-peer/simplepeer.min.js"></script>
-<script>
-const socket = io();
-let peer, remoteVideo = document.getElementById('remoteVideo');
-document.getElementById('startBtn').onclick = () => {
-  peer = new SimplePeer({initiator:true, trickle:false});
-  peer.on('signal', data => socket.emit('admin-signal', data));
-  socket.on('user-signal', data => peer.signal(data));
-  peer.on('stream', stream => remoteVideo.srcObject = stream);
-  document.getElementById('startBtn').disabled = true;
-  document.getElementById('stopBtn').disabled = false;
-};
-document.getElementById('stopBtn').onclick = () => {
-  peer?.destroy();
-  peer = null;
-  remoteVideo.srcObject = null;
-  document.getElementById('startBtn').disabled = false;
-  document.getElementById('stopBtn').disabled = true;
-  socket.emit('admin-stop');
-};
-socket.on('user-disconnect', () => {
-  peer?.destroy();
-  peer = null;
-  remoteVideo.srcObject = null;
-  alert('User disconnected.');
-});
-</script>
-</body></html>
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Admin</title>
+  <style>
+    #remoteVideo { width: 100%; height: auto; }
+    #localVideo {
+      position: fixed;
+      width: 200px;
+      height: 150px;
+      bottom: 10px;
+      right: 10px;
+      border: 2px solid white;
+    }
+  </style>
+</head>
+<body>
+  <video id="remoteVideo" autoplay playsinline></video>
+  <video id="localVideo" autoplay muted playsinline></video>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/simple-peer/simplepeer.min.js"></script>
+  <script>
+    const socket = io();
+    const localVideo = document.getElementById('localVideo');
+    const remoteVideo = document.getElementById('remoteVideo');
+
+    navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then(stream => {
+      localVideo.srcObject = stream;
+
+      const peer = new SimplePeer({ initiator: true, trickle: false, stream });
+
+      peer.on('signal', data => socket.emit('admin-signal', data));
+      socket.on('user-signal', data => peer.signal(data));
+
+      peer.on('stream', remoteStream => {
+        remoteVideo.srcObject = remoteStream;
+      });
+    });
+  </script>
+</body>
+</html>
